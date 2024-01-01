@@ -1,0 +1,47 @@
+---
+- name: Name new Master
+  hosts: newNode
+  gather_facts: true
+  become: true
+  vars:
+    next_host: "{{ groups['master'] | length | int + 1}}"
+  tasks:
+    - name: Pre-run check OS
+      ansible.builtin.fail:
+        msg: "OS should be Ubuntu 22.04, not {{ ansible_distribution }} {{ ansible_distribution_version }}"
+      when: ansible_distribution != 'Ubuntu' or ansible_distribution_version != '22.04'
+    - name: Pre-run check hostname.
+      ansible.builtin.fail:
+        msg: "Hostname should not have been changed already"
+      when: ansible_host != 'node-new'
+    - name: Set hostname
+      ansible.builtin.hostname:
+        name: k8s-master-{{ next_host }}
+    - name: Set public host apt-key
+      ansible.builtin.command: grep -oE "^(\w|[.,-])+ [^ ]+" /etc/ssh/ssh_host_ecdsa_key.pub
+      register: host_key_output
+      changed_when: false
+
+    - name: Reboot node
+      ansible.builtin.command: shutdown -r 1
+      register: async_reboot_output
+      changed_when: async_reboot_output.rc != 0
+
+- name: Update inventory
+  hosts: local
+  connection: local
+  vars:
+    next_host: "{{ groups['master'] | length | int + 1}}"
+    host_key: "{{ hostvars['node-new'].host_key_output.stdout_lines[0] }}"
+  tasks:
+    - name: Add hostname to inventory
+      delegate_to: localhost
+      ansible.builtin.lineinfile:
+        path: "{{ inventory_file }}"
+        insertbefore: "#masterEnd"
+        line: "    k8s-master-{{ next_host }}:"
+    - name: Add to known hosts
+      delegate_to: localhost
+      ansible.builtin.lineinfile:
+        path: ~/.ssh/known_hosts
+        line: "k8s-master-{{ next_host }} {{ host_key }}"

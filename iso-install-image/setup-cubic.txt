@@ -1,0 +1,6 @@
+sudo apt-add-repository ppa:cubic-wizard/release
+sudo apt update && sudo apt install cubic -y
+mkdir cubic
+wget https://releases.ubuntu.com/22.04.3/ubuntu-22.04.3-live-server-amd64.iso
+
+cubic ./cubic ./ubuntu-22.04.3-live-server-amd64.iso

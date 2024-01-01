@@ -1,0 +1,40 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: nb_NO.UTF-8
+  timezone: 'Europe/Oslo'
+  keyboard:
+    layout: 'no'
+  refresh-installer:
+    update: false
+  storage:
+    layout:
+      name: direct
+    swap: 0
+  identity:
+    username: << your user name >>
+    password: '<< hashed value of password created with "openssl passwd -6" >>'
+    hostname: node-new
+  ssh:
+    install-server: true
+    allow-pw: false
+  packages:
+    - python3.11
+  user-data:
+    disable_root: false
+    ssh_pwauth: false
+    users:
+    - name: ansible
+      gecos: Ansible User
+      groups: users,admin,wheel
+      sudo: ALL=(ALL) NOPASSWD:ALL
+      shell: /bin/bash
+      lock_passwd: true
+      ssh_authorized_keys:
+      - << public user ssh key for user running ansible playbooks >> 
+    - name: << your user name >>
+      primary_group: << your user name >>
+      groups: sudo
+      shell: /bin/bash
+      ssh_authorized_keys:
+      - << public user ssh key for user logging manually into machines >>
